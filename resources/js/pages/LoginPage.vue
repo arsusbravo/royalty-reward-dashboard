@@ -89,7 +89,8 @@ export default {
             this.error   = null;
             try {
                 await login(this.form.email, this.form.password, this.form.remember);
-                this.$router.push('/');
+                // Full reload so Blade re-renders a fresh CSRF token after session regeneration
+                window.location.href = '/';
             } catch (e) {
                 this.error = e.message ?? 'Login failed. Please try again.';
             } finally {
