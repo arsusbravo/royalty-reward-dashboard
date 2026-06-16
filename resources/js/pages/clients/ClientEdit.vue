@@ -21,6 +21,18 @@
         <div v-else-if="fetchError" class="card text-center text-red-500">{{ fetchError }}</div>
 
         <form v-else @submit.prevent="handleSubmit" class="space-y-6">
+            <!-- Photo -->
+            <div class="card space-y-3">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Face Photo</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">
+                        {{ isAdmin ? 'Update the client photo (will re-enroll face)' : 'Capture a new photo for face recognition' }}
+                    </p>
+                </div>
+                <PhotoCapture :current-photo-url="client?.photo_url" @captured="onPhotoCaptured" show-guide />
+                <p v-if="errors.photo" class="text-xs text-red-500">{{ errors.photo[0] }}</p>
+            </div>
+
             <!-- Personal info — admin only -->
             <div v-if="isAdmin" class="card space-y-4">
                 <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Personal Information</h3>
@@ -105,18 +117,6 @@
                         {{ client.face_enrolled ? 'Enrolled' : 'Not Enrolled' }}
                     </span>
                 </div>
-            </div>
-
-            <!-- Photo -->
-            <div class="card space-y-3">
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Face Photo</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">
-                        {{ isAdmin ? 'Update the client photo (will re-enroll face)' : 'Capture a new photo for face recognition' }}
-                    </p>
-                </div>
-                <PhotoCapture :current-photo-url="client?.photo_url" @captured="onPhotoCaptured" />
-                <p v-if="errors.photo" class="text-xs text-red-500">{{ errors.photo[0] }}</p>
             </div>
 
             <!-- Employee: must provide photo -->

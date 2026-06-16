@@ -11,6 +11,16 @@
         </div>
 
         <form @submit.prevent="handleSubmit" class="space-y-6">
+            <!-- Photo -->
+            <div class="card space-y-3">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Face Photo</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Used for face recognition enrollment</p>
+                </div>
+                <PhotoCapture @captured="onPhotoCaptured" show-guide />
+                <p v-if="errors.photo" class="text-xs text-red-500">{{ errors.photo[0] }}</p>
+            </div>
+
             <!-- Personal info -->
             <div class="card space-y-4">
                 <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Personal Information</h3>
@@ -67,16 +77,6 @@
                         <input v-model="form.password_confirmation" type="password" autocomplete="new-password" class="form-input" />
                     </div>
                 </div>
-            </div>
-
-            <!-- Photo -->
-            <div class="card space-y-3">
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Face Photo</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Used for face recognition enrollment</p>
-                </div>
-                <PhotoCapture @captured="onPhotoCaptured" />
-                <p v-if="errors.photo" class="text-xs text-red-500">{{ errors.photo[0] }}</p>
             </div>
 
             <!-- Face enrollment notice -->

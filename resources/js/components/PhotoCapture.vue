@@ -23,6 +23,11 @@
             <div class="relative rounded-lg overflow-hidden bg-black">
                 <video ref="video" autoplay playsinline class="w-full max-h-72 object-contain"></video>
                 <canvas ref="canvas" class="hidden"></canvas>
+                <!-- Face-positioning guide overlay -->
+                <div v-if="showGuide" class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    <div class="h-[82%] w-[38%] rounded-[50%] border-2 border-dashed border-white/80"></div>
+                </div>
+
                 <button
                     type="button"
                     @click="switchCamera"
@@ -127,6 +132,10 @@ export default {
             default: null,
         },
         autoDetect: {
+            type: Boolean,
+            default: false,
+        },
+        showGuide: {
             type: Boolean,
             default: false,
         },
