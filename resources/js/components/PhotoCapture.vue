@@ -25,7 +25,7 @@
                 <canvas ref="canvas" class="hidden"></canvas>
                 <!-- Face-positioning guide overlay -->
                 <div v-if="showGuide" class="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <div class="h-[82%] w-[38%] rounded-[50%] border-2 border-dashed border-white/80"></div>
+                    <div class="h-[88%] w-auto aspect-[3/4] rounded-[50%] border-2 border-dashed border-white/80"></div>
                 </div>
 
                 <button
@@ -68,7 +68,7 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.069A1 1 0 0121 8.882v6.236a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    Webcam
+                    Camera
                 </button>
                 <label class="btn-secondary cursor-pointer">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
