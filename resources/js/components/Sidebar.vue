@@ -66,6 +66,10 @@ const UserGroupIcon = {
     template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>`,
 };
 
+const SearchIcon = {
+    template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>`,
+};
+
 export default {
     name: 'Sidebar',
     data() {
@@ -77,8 +81,9 @@ export default {
         },
         navItems() {
             const items = [
-                { name: 'Dashboard', to: '/',        icon: HomeIcon },
-                { name: 'Clients',   to: '/clients', icon: UsersIcon },
+                { name: 'Dashboard',    to: '/',            icon: HomeIcon },
+                { name: 'Clients',      to: '/clients',      icon: UsersIcon },
+                { name: 'Find Client',  to: '/find-client',  icon: SearchIcon },
             ];
             if (this.isAdmin) {
                 items.push({ name: 'Users', to: '/users', icon: UserGroupIcon });

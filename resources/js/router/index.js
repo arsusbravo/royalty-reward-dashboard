@@ -5,7 +5,9 @@ import LoginPage     from '@/pages/LoginPage.vue';
 import DashboardPage from '@/pages/DashboardPage.vue';
 import ClientsIndex  from '@/pages/clients/ClientsIndex.vue';
 import ClientCreate  from '@/pages/clients/ClientCreate.vue';
+import ClientShow    from '@/pages/clients/ClientShow.vue';
 import ClientEdit    from '@/pages/clients/ClientEdit.vue';
+import FaceSearchPage from '@/pages/FaceSearchPage.vue';
 import UsersIndex    from '@/pages/users/UsersIndex.vue';
 import UserCreate    from '@/pages/users/UserCreate.vue';
 
@@ -35,10 +37,22 @@ const routes = [
         meta: { requiresAuth: true, title: 'New Client' },
     },
     {
+        path: '/clients/:id',
+        name: 'clients.show',
+        component: ClientShow,
+        meta: { requiresAuth: true, title: 'Client Details' },
+    },
+    {
         path: '/clients/:id/edit',
         name: 'clients.edit',
         component: ClientEdit,
         meta: { requiresAuth: true, title: 'Edit Client' },
+    },
+    {
+        path: '/find-client',
+        name: 'find-client',
+        component: FaceSearchPage,
+        meta: { requiresAuth: true, title: 'Find Client' },
     },
     {
         path: '/users',

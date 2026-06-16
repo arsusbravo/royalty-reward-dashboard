@@ -17,6 +17,14 @@ function defaultHeaders(isFormData = false) {
 async function request(method, url, body = null) {
     const isFormData = body instanceof FormData;
 
+    // PHP never populates $_POST/$_FILES for multipart bodies on PUT/PATCH —
+    // only true POST requests get parsed. Spoof via _method so Laravel still
+    // routes/validates as PUT/PATCH while the wire request stays a real POST.
+    if (isFormData && (method === 'PUT' || method === 'PATCH')) {
+        body.append('_method', method);
+        method = 'POST';
+    }
+
     const options = {
         method,
         headers: defaultHeaders(isFormData),

@@ -41,6 +41,19 @@ class FaceRecognitionService
     }
 
     /**
+     * Search for ranked candidate matches against all registered faces.
+     * POST /faces/search?top_k={topK}  multipart: file
+     * Returns: [ { id, name, similarity }, ... ] sorted by similarity descending.
+     * No threshold is applied by the API — always returns up to top_k candidates.
+     */
+    public function searchFaces(UploadedFile|string $image, int $topK = 5): array
+    {
+        return $this->postMultipart("{$this->baseUrl}/faces/search?top_k={$topK}", [
+            'file' => $this->buildCurlFile($image),
+        ]);
+    }
+
+    /**
      * Compare two faces.
      * POST /faces/compare  multipart: file1, file2
      * Returns: { similarity, is_same_person }

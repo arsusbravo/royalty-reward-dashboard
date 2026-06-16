@@ -36,8 +36,9 @@ return [
     ],
 
     'face_api' => [
-        'base_url' => env('FACE_API_BASE_URL', 'http://127.0.0.1:8000'),
-        'timeout'  => (int) env('FACE_API_TIMEOUT', 30),
+        'base_url'        => env('FACE_API_BASE_URL', 'http://127.0.0.1:8000'),
+        'timeout'         => (int) env('FACE_API_TIMEOUT', 30),
+        'match_threshold' => (float) env('FACE_API_MATCH_THRESHOLD', 0.5),
     ],
 
 ];

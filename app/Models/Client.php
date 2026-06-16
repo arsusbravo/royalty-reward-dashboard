@@ -48,4 +48,14 @@ class Client extends Authenticatable
     {
         return $this->hasMany(FaceVerification::class);
     }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function faceSearches(): HasMany
+    {
+        return $this->hasMany(FaceSearch::class);
+    }
 }

@@ -55,7 +55,7 @@
                     <tbody class="bg-white divide-y divide-gray-100">
                         <tr v-for="client in clients" :key="client.id" class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
+                                <router-link :to="`/clients/${client.id}`" class="flex items-center gap-3">
                                     <img
                                         v-if="client.photo_url"
                                         :src="client.photo_url"
@@ -66,10 +66,10 @@
                                         {{ client.name[0].toUpperCase() }}
                                     </div>
                                     <div>
-                                        <p class="text-sm font-medium text-gray-900">{{ client.name }}</p>
+                                        <p class="text-sm font-medium text-gray-900 hover:text-blue-600">{{ client.name }}</p>
                                         <p v-if="client.date_of_birth" class="text-xs text-gray-400">DOB: {{ client.date_of_birth }}</p>
                                     </div>
-                                </div>
+                                </router-link>
                             </td>
                             <td class="px-6 py-4">
                                 <p class="text-sm text-gray-900">{{ client.email ?? '—' }}</p>
