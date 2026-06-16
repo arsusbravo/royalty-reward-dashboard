@@ -40,7 +40,7 @@
                 </button>
             </div>
             <p v-if="autoDetect" class="text-xs text-center text-gray-500">
-                {{ faceDetected ? 'Face detected — capturing...' : 'Looking for a face...' }}
+                {{ faceDetected ? 'Face detected — capturing...' : (frameBlurry ? 'Hold still...' : 'Looking for a face...') }}
             </p>
             <div class="flex gap-2">
                 <button type="button" @click="captureFrame" class="btn-primary flex-1">
@@ -92,6 +92,45 @@ import { markRaw } from 'vue';
 // console during graph init/inference/teardown. Mute the console for the
 // duration of these calls only — our own error logs happen outside this window.
 const consoleMethods = ['log', 'info', 'warn', 'error', 'debug'];
+
+const BLUR_THRESHOLD = 100;
+
+function computeBlurScore(video, boundingBox) {
+    const W = 160, H = 120;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    if (boundingBox) {
+        // Crop to the detected face region so background texture doesn't
+        // inflate the sharpness score and let blurry face frames slip through.
+        ctx.drawImage(
+            video,
+            boundingBox.originX, boundingBox.originY,
+            boundingBox.width,   boundingBox.height,
+            0, 0, W, H,
+        );
+    } else {
+        ctx.drawImage(video, 0, 0, W, H);
+    }
+    const { data } = ctx.getImageData(0, 0, W, H);
+    const gray = new Float32Array(W * H);
+    for (let i = 0; i < W * H; i++) {
+        gray[i] = (data[i * 4] + data[i * 4 + 1] + data[i * 4 + 2]) / 3;
+    }
+    let sum = 0, sumSq = 0, n = 0;
+    for (let y = 1; y < H - 1; y++) {
+        for (let x = 1; x < W - 1; x++) {
+            const v = Math.abs(
+                -4 * gray[y * W + x]
+                + gray[(y - 1) * W + x] + gray[(y + 1) * W + x]
+                + gray[y * W + (x - 1)] + gray[y * W + (x + 1)]
+            );
+            sum += v; sumSq += v * v; n++;
+        }
+    }
+    const mean = sum / n;
+    return sumSq / n - mean * mean;
+}
 
 function withSilencedConsole(fn) {
     const original = {};
@@ -147,6 +186,7 @@ export default {
             previewUrl:   null,
             webcamError:  null,
             faceDetected: false,
+            frameBlurry:  false,
             detector:     null,
             detectTimer:  null,
             facingMode:   'user',
@@ -174,6 +214,7 @@ export default {
 
         async startFaceDetection() {
             this.faceDetected = false;
+            this.frameBlurry  = false;
 
             try {
                 const { FaceDetector, FilesetResolver } = await import('@mediapipe/tasks-vision');
@@ -202,8 +243,16 @@ export default {
                     try {
                         const result = withSilencedConsole(() => this.detector.detectForVideo(video, performance.now()));
                         if (result.detections.length > 0) {
-                            this.faceDetected = true;
-                            this.captureFrame();
+                            const box = result.detections[0].boundingBox;
+                            if (computeBlurScore(video, box) >= BLUR_THRESHOLD) {
+                                this.frameBlurry  = false;
+                                this.faceDetected = true;
+                                this.captureFrame();
+                            } else {
+                                this.frameBlurry = true;
+                            }
+                        } else {
+                            this.frameBlurry = false;
                         }
                     } catch (err) {
                         console.error('Face detection tick failed:', err);
