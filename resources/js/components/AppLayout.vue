@@ -12,9 +12,9 @@
         <template v-else-if="authState.user">
             <div class="flex h-full overflow-hidden">
                 <Sidebar />
-                <div class="flex flex-1 flex-col overflow-hidden">
+                <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
                     <Navbar />
-                    <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
+                    <main class="min-w-0 flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-6">
                         <router-view />
                     </main>
                 </div>

@@ -1,6 +1,18 @@
 <template>
-    <header class="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6">
-        <h1 class="text-lg font-semibold text-gray-900">{{ pageTitle }}</h1>
+    <header class="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6">
+        <div class="flex items-center gap-3">
+            <button
+                type="button"
+                @click="toggleSidebar"
+                class="-ml-1 flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 md:hidden"
+                aria-label="Toggle navigation"
+            >
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            <h1 class="text-lg font-semibold text-gray-900">{{ pageTitle }}</h1>
+        </div>
 
         <div class="flex items-center gap-3">
             <button
@@ -20,6 +32,7 @@
 
 <script>
 import { logout } from '@/utils/auth.js';
+import { toggleSidebar } from '@/utils/ui.js';
 
 export default {
     name: 'Navbar',
@@ -32,6 +45,7 @@ export default {
         },
     },
     methods: {
+        toggleSidebar,
         async handleLogout() {
             this.loggingOut = true;
             await logout();

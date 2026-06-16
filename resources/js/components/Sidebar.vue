@@ -1,5 +1,17 @@
 <template>
-    <aside class="flex w-64 flex-shrink-0 flex-col bg-[#1e2538]">
+    <!-- Mobile backdrop -->
+    <div
+        v-if="uiState.sidebarOpen"
+        class="fixed inset-0 z-30 bg-black/50 md:hidden"
+        @click="closeSidebar"
+    ></div>
+
+    <aside
+        :class="[
+            'fixed inset-y-0 left-0 z-40 flex w-64 flex-shrink-0 flex-col bg-[#1e2538] transition-transform duration-200 md:relative md:translate-x-0',
+            uiState.sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        ]"
+    >
         <!-- Logo -->
         <div class="flex h-16 items-center gap-3 px-6 border-b border-white/10">
             <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
@@ -21,7 +33,7 @@
                 v-slot="{ isActive, navigate }"
             >
                 <button
-                    @click="navigate"
+                    @click="() => { navigate(); closeSidebar(); }"
                     :class="[
                         'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                         isActive
@@ -53,6 +65,7 @@
 <script>
 import { h } from 'vue';
 import { authState } from '@/utils/auth.js';
+import { uiState, closeSidebar } from '@/utils/ui.js';
 
 // Inline SVG icon components, as render functions — `template` strings
 // require runtime compilation, which the bundler build of Vue doesn't include.
@@ -77,7 +90,10 @@ const SearchIcon = svgIcon('M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 
 export default {
     name: 'Sidebar',
     data() {
-        return { authState };
+        return { authState, uiState };
+    },
+    methods: {
+        closeSidebar,
     },
     computed: {
         isAdmin() {
