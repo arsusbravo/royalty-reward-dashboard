@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('face_searches', function (Blueprint $table) {
-            $table->json('candidates')->nullable()->after('similarity');
+            // longText, not json — the Plesk server's MariaDB predates JSON
+            // type support. Eloquent's array cast handles encode/decode either way.
+            $table->longText('candidates')->nullable()->after('similarity');
         });
     }
 
