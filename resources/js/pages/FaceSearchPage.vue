@@ -41,19 +41,12 @@
             <button type="button" @click="resetSearch" class="btn-secondary">Try Again</button>
         </div>
 
-        <!-- Candidates found -->
-        <div v-else class="space-y-6">
-            <div v-if="!searchResult.matched && otherCandidates.length > 0" class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700 flex gap-2">
-                <svg class="h-4 w-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                No confident match — showing the closest guesses below. Please verify identity carefully.
-            </div>
-
+        <!-- Confident match or manually selected → client detail + payment -->
+        <div v-else-if="searchResult.matched || manuallySelected" class="space-y-6">
             <div class="card">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                        {{ searchResult.matched ? 'Client Found' : 'Best Guess' }}
+                        {{ manuallySelected ? 'Manually Selected' : 'Client Found' }}
                     </h3>
                     <span :class="matchBadgeClass(selected.similarity)">
                         {{ (selected.similarity * 100).toFixed(1) }}% match
@@ -145,8 +138,8 @@
                 </div>
             </div>
 
-            <!-- Other possible matches -->
-            <div v-if="otherCandidates.length > 0" class="card">
+            <!-- Other possible matches (confident match only) -->
+            <div v-if="searchResult.matched && otherCandidates.length > 0" class="card">
                 <h3 class="mb-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Other Possible Matches</h3>
                 <div class="divide-y divide-gray-100">
                     <div v-for="c in otherCandidates" :key="c.client.id" class="flex items-center justify-between py-2.5">
@@ -176,6 +169,54 @@
                 Search Another Client
             </button>
         </div>
+
+        <!-- No confident match → show closest candidates for manual selection -->
+        <div v-else class="space-y-6">
+            <div class="card text-center space-y-2 py-6">
+                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                    <svg class="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </div>
+                <p class="font-semibold text-gray-900">No confident match found</p>
+                <p class="text-sm text-gray-500">Closest results are shown below — please verify identity before selecting.</p>
+            </div>
+
+            <div class="card">
+                <h3 class="mb-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Closest Matches</h3>
+                <div class="divide-y divide-gray-100">
+                    <div v-for="(c, i) in closestCandidates" :key="c.client.id" class="flex items-center justify-between py-3">
+                        <div class="flex items-center gap-3">
+                            <img
+                                v-if="c.client.photo_url"
+                                :src="c.client.photo_url"
+                                :alt="c.client.name"
+                                class="h-10 w-10 rounded-full object-cover flex-shrink-0"
+                            />
+                            <div v-else class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-medium text-gray-600">
+                                {{ c.client.name[0].toUpperCase() }}
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ c.client.name }}</p>
+                                <p class="text-xs text-gray-400">{{ c.client.email ?? 'No email' }}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 flex-shrink-0">
+                            <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                                {{ (c.similarity * 100).toFixed(1) }}%
+                            </span>
+                            <button type="button" class="text-sm text-blue-600 hover:text-blue-700 font-medium" @click="selectManually(i)">
+                                Select
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" @click="resetSearch" class="btn-secondary w-full justify-center">
+                Search Another Client
+            </button>
+        </div>
     </div>
 </template>
 
@@ -193,6 +234,7 @@ export default {
             searchError:      null,
             searchResult:     null,
             selectedIndex:    0,
+            manuallySelected: false,
             payments:         [],
             paymentForm:      { amount: '', notes: '' },
             recordingPayment: false,
@@ -207,14 +249,13 @@ export default {
         selected() {
             return this.candidates[this.selectedIndex] ?? null;
         },
+        closestCandidates() {
+            return this.candidates.slice(0, 3);
+        },
         otherCandidates() {
-            // Drop candidates well below the match threshold — they're too
-            // far away to be worth showing as a plausible alternate.
-            const minSimilarity = (this.searchResult?.threshold ?? 0.5) / 2;
-
             return this.candidates
                 .map((c, originalIndex) => ({ ...c, originalIndex }))
-                .filter((c) => c.originalIndex !== this.selectedIndex && c.similarity >= minSimilarity);
+                .filter((c) => c.originalIndex !== this.selectedIndex);
         },
     },
     methods: {
@@ -234,7 +275,8 @@ export default {
                 const result       = await api.post('/face-search', fd);
                 this.searchResult  = result;
                 this.selectedIndex = 0;
-                if (this.selected) {
+                this.manuallySelected = false;
+                if (this.searchResult.matched && this.selected) {
                     await this.fetchPayments(this.selected.client.id);
                 }
             } catch (e) {
@@ -243,8 +285,15 @@ export default {
                 this.searching = false;
             }
         },
+        async selectManually(closestIndex) {
+            this.selectedIndex    = closestIndex;
+            this.manuallySelected = true;
+            this.paymentError     = null;
+            this.paymentSuccess   = null;
+            await this.fetchPayments(this.candidates[closestIndex].client.id);
+        },
         async selectCandidate(index) {
-            this.selectedIndex = index;
+            this.selectedIndex  = index;
             this.paymentError   = null;
             this.paymentSuccess = null;
             if (this.selected) {
@@ -285,6 +334,7 @@ export default {
             this.capturedPhoto    = null;
             this.searchResult     = null;
             this.selectedIndex    = 0;
+            this.manuallySelected = false;
             this.searchError      = null;
             this.payments         = [];
             this.paymentForm      = { amount: '', notes: '' };
