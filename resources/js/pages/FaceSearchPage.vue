@@ -7,7 +7,7 @@
 
         <!-- Capture -->
         <div v-if="!searchResult" class="card space-y-4">
-            <PhotoCapture @captured="onPhotoCaptured" />
+            <PhotoCapture @captured="onPhotoCaptured" auto-detect />
 
             <div v-if="searchError" class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
                 {{ searchError }}

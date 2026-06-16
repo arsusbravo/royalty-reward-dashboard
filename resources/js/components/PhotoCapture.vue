@@ -24,6 +24,9 @@
                 <video ref="video" autoplay playsinline class="w-full max-h-72 object-contain"></video>
                 <canvas ref="canvas" class="hidden"></canvas>
             </div>
+            <p v-if="autoDetect" class="text-xs text-center text-gray-500">
+                {{ faceDetected ? 'Face detected — capturing...' : 'Looking for a face...' }}
+            </p>
             <div class="flex gap-2">
                 <button type="button" @click="captureFrame" class="btn-primary flex-1">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,6 +71,43 @@
 </template>
 
 <script>
+import { markRaw } from 'vue';
+
+// MediaPipe's WASM runtime writes its own INFO/WARNING lines straight to the
+// console during graph init/inference/teardown. Mute the console for the
+// duration of these calls only — our own error logs happen outside this window.
+const consoleMethods = ['log', 'info', 'warn', 'error', 'debug'];
+
+function withSilencedConsole(fn) {
+    const original = {};
+    for (const method of consoleMethods) {
+        original[method] = console[method];
+        console[method] = () => {};
+    }
+    try {
+        return fn();
+    } finally {
+        for (const method of consoleMethods) {
+            console[method] = original[method];
+        }
+    }
+}
+
+async function withSilencedConsoleAsync(fn) {
+    const original = {};
+    for (const method of consoleMethods) {
+        original[method] = console[method];
+        console[method] = () => {};
+    }
+    try {
+        return await fn();
+    } finally {
+        for (const method of consoleMethods) {
+            console[method] = original[method];
+        }
+    }
+}
+
 export default {
     name: 'PhotoCapture',
     emits: ['captured'],
@@ -76,13 +116,20 @@ export default {
             type: String,
             default: null,
         },
+        autoDetect: {
+            type: Boolean,
+            default: false,
+        },
     },
     data() {
         return {
-            mode:        'idle',
-            stream:      null,
-            previewUrl:  null,
-            webcamError: null,
+            mode:         'idle',
+            stream:       null,
+            previewUrl:   null,
+            webcamError:  null,
+            faceDetected: false,
+            detector:     null,
+            detectTimer:  null,
         };
     },
     methods: {
@@ -96,12 +143,72 @@ export default {
                 this.mode = 'webcam';
                 await this.$nextTick();
                 this.$refs.video.srcObject = this.stream;
+
+                if (this.autoDetect) {
+                    await this.startFaceDetection();
+                }
             } catch (err) {
                 this.webcamError = 'Could not access camera. Please allow camera permissions or upload a file instead.';
             }
         },
 
+        async startFaceDetection() {
+            this.faceDetected = false;
+
+            try {
+                const { FaceDetector, FilesetResolver } = await import('@mediapipe/tasks-vision');
+
+                // CDN version below must match the installed npm package version
+                // (package.json) — mismatched JS/WASM builds break runningMode handling.
+                const vision = await FilesetResolver.forVisionTasks(
+                    'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
+                );
+
+                // markRaw: the detector is backed by a WASM/embind binding that's
+                // sensitive to object identity. Vue's reactive Proxy around it
+                // breaks the internal runningMode/state tracking.
+                this.detector = markRaw(await withSilencedConsoleAsync(() => FaceDetector.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
+                        delegate: 'CPU',
+                    },
+                    runningMode: 'VIDEO',
+                })));
+
+                this.detectTimer = setInterval(() => {
+                    const video = this.$refs.video;
+                    if (!video || video.readyState < 2 || !this.detector) return;
+
+                    try {
+                        const result = withSilencedConsole(() => this.detector.detectForVideo(video, performance.now()));
+                        if (result.detections.length > 0) {
+                            this.faceDetected = true;
+                            this.captureFrame();
+                        }
+                    } catch (err) {
+                        console.error('Face detection tick failed:', err);
+                        this.stopFaceDetection();
+                    }
+                }, 200);
+            } catch (err) {
+                // Face detection failed to load — manual Capture button still works.
+                console.error('Face detector setup failed:', err);
+                this.stopFaceDetection();
+            }
+        },
+
+        stopFaceDetection() {
+            clearInterval(this.detectTimer);
+            this.detectTimer = null;
+            if (this.detector) {
+                withSilencedConsole(() => this.detector.close());
+            }
+            this.detector = null;
+        },
+
         captureFrame() {
+            this.stopFaceDetection();
+
             const video  = this.$refs.video;
             const canvas = this.$refs.canvas;
             canvas.width  = video.videoWidth;
@@ -118,6 +225,7 @@ export default {
         },
 
         cancelWebcam() {
+            this.stopFaceDetection();
             this.stopStream();
             this.mode = 'idle';
         },
@@ -146,6 +254,7 @@ export default {
     },
 
     beforeUnmount() {
+        this.stopFaceDetection();
         this.stopStream();
         if (this.previewUrl) URL.revokeObjectURL(this.previewUrl);
     },
