@@ -23,6 +23,16 @@
             <div class="relative rounded-lg overflow-hidden bg-black">
                 <video ref="video" autoplay playsinline class="w-full max-h-72 object-contain"></video>
                 <canvas ref="canvas" class="hidden"></canvas>
+                <button
+                    type="button"
+                    @click="switchCamera"
+                    class="absolute top-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                    aria-label="Switch camera"
+                >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
             </div>
             <p v-if="autoDetect" class="text-xs text-center text-gray-500">
                 {{ faceDetected ? 'Face detected — capturing...' : 'Looking for a face...' }}
@@ -130,6 +140,7 @@ export default {
             faceDetected: false,
             detector:     null,
             detectTimer:  null,
+            facingMode:   'user',
         };
     },
     methods: {
@@ -137,7 +148,7 @@ export default {
             this.webcamError = null;
             try {
                 this.stream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: this.facingMode },
                     audio: false,
                 });
                 this.mode = 'webcam';
@@ -195,6 +206,13 @@ export default {
                 console.error('Face detector setup failed:', err);
                 this.stopFaceDetection();
             }
+        },
+
+        async switchCamera() {
+            this.facingMode = this.facingMode === 'user' ? 'environment' : 'user';
+            this.stopFaceDetection();
+            this.stopStream();
+            await this.startWebcam();
         },
 
         stopFaceDetection() {
