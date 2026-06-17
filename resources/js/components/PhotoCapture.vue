@@ -93,7 +93,7 @@ import { markRaw } from 'vue';
 // duration of these calls only — our own error logs happen outside this window.
 const consoleMethods = ['log', 'info', 'warn', 'error', 'debug'];
 
-const BLUR_THRESHOLD = 100;
+const BLUR_THRESHOLD = 60;
 
 function computeBlurScore(video, boundingBox) {
     const W = 160, H = 120;
@@ -258,7 +258,7 @@ export default {
                         console.error('Face detection tick failed:', err);
                         this.stopFaceDetection();
                     }
-                }, 200);
+                }, 100);
             } catch (err) {
                 // Face detection failed to load — manual Capture button still works.
                 console.error('Face detector setup failed:', err);
