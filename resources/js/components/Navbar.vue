@@ -17,8 +17,7 @@
         <div class="flex items-center gap-3">
             <button
                 @click="handleLogout"
-                :disabled="loggingOut"
-                class="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                class="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
             >
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -31,14 +30,10 @@
 </template>
 
 <script>
-import { logout } from '@/utils/auth.js';
 import { toggleSidebar } from '@/utils/ui.js';
 
 export default {
     name: 'Navbar',
-    data() {
-        return { loggingOut: false };
-    },
     computed: {
         pageTitle() {
             return this.$route.meta?.title ?? 'Face Recognition Admin';
@@ -46,10 +41,17 @@ export default {
     },
     methods: {
         toggleSidebar,
-        async handleLogout() {
-            this.loggingOut = true;
-            await logout();
-            this.$router.push('/login');
+        handleLogout() {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/logout';
+            const token = document.createElement('input');
+            token.type  = 'hidden';
+            token.name  = '_token';
+            token.value = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+            form.appendChild(token);
+            document.body.appendChild(form);
+            form.submit();
         },
     },
 };

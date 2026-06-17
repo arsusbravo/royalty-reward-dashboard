@@ -19,14 +19,13 @@ export async function fetchUser() {
 
 export async function login(email, password, remember = false) {
     const data = await api.post('/login', { email, password, remember });
-    authState.user = data.user;
+    // Don't update authState here — LoginPage does a full page reload immediately after,
+    // so fetchUser() will populate authState fresh on the new load.
+    // Setting authState.user here would cause a brief flash of the authenticated shell.
     return data;
 }
 
 export async function logout() {
-    try {
-        await api.post('/logout');
-    } finally {
-        authState.user = null;
-    }
+    await api.post('/logout');
+    authState.user = null;
 }
