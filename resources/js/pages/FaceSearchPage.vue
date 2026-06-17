@@ -7,7 +7,7 @@
 
         <!-- Capture -->
         <div v-if="!searchResult" class="card space-y-4">
-            <PhotoCapture @captured="onPhotoCaptured" auto-detect />
+            <PhotoCapture ref="capture" @captured="onPhotoCaptured" auto-detect />
 
             <div v-if="searchError" class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
                 {{ searchError }}
@@ -23,31 +23,15 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                 </svg>
-                {{ searching ? 'Searching...' : 'Search' }}
+                {{ savingNew ? 'Saving new client...' : (searching ? 'Searching...' : 'Search') }}
             </button>
         </div>
 
-        <!-- No candidates at all -->
-        <div v-else-if="candidates.length === 0" class="card text-center space-y-4 py-8">
-            <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
-                <svg class="h-6 w-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-            <div>
-                <p class="font-medium text-gray-900">No matching client found</p>
-                <p class="text-sm text-gray-500">No registered face was close enough to identify.</p>
-            </div>
-            <button type="button" @click="resetSearch" class="btn-secondary">Try Again</button>
-        </div>
-
-        <!-- Confident match or manually selected → client detail + payment -->
-        <div v-else-if="searchResult.matched || manuallySelected" class="space-y-6">
+        <!-- Confident match → client detail + payment -->
+        <div v-else-if="searchResult" class="space-y-6">
             <div class="card">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                        {{ manuallySelected ? 'Manually Selected' : 'Client Found' }}
-                    </h3>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Client Found</h3>
                     <span :class="matchBadgeClass(selected.similarity)">
                         {{ (selected.similarity * 100).toFixed(1) }}% match
                     </span>
@@ -170,53 +154,6 @@
             </button>
         </div>
 
-        <!-- No confident match → show closest candidates for manual selection -->
-        <div v-else class="space-y-6">
-            <div class="card text-center space-y-2 py-6">
-                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                    <svg class="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </div>
-                <p class="font-semibold text-gray-900">No confident match found</p>
-                <p class="text-sm text-gray-500">Closest results are shown below — please verify identity before selecting.</p>
-            </div>
-
-            <div class="card">
-                <h3 class="mb-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Closest Matches</h3>
-                <div class="divide-y divide-gray-100">
-                    <div v-for="(c, i) in closestCandidates" :key="c.client.id" class="flex items-center justify-between py-3">
-                        <div class="flex items-center gap-3">
-                            <img
-                                v-if="c.client.photo_url"
-                                :src="c.client.photo_url"
-                                :alt="c.client.name"
-                                class="h-10 w-10 rounded-full object-cover flex-shrink-0"
-                            />
-                            <div v-else class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-medium text-gray-600">
-                                {{ c.client.name[0].toUpperCase() }}
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-gray-900">{{ c.client.name }}</p>
-                                <p class="text-xs text-gray-400">{{ c.client.email ?? 'No email' }}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3 flex-shrink-0">
-                            <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-                                {{ (c.similarity * 100).toFixed(1) }}%
-                            </span>
-                            <button type="button" class="text-sm text-blue-600 hover:text-blue-700 font-medium" @click="selectManually(i)">
-                                Select
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <button type="button" @click="resetSearch" class="btn-secondary w-full justify-center">
-                Search Another Client
-            </button>
-        </div>
     </div>
 </template>
 
@@ -231,10 +168,10 @@ export default {
         return {
             capturedPhoto:    null,
             searching:        false,
+            savingNew:        false,
             searchError:      null,
             searchResult:     null,
             selectedIndex:    0,
-            manuallySelected: false,
             payments:         [],
             paymentForm:      { amount: '', notes: '' },
             recordingPayment: false,
@@ -249,18 +186,17 @@ export default {
         selected() {
             return this.candidates[this.selectedIndex] ?? null;
         },
-        closestCandidates() {
-            return this.candidates.slice(0, 3);
-        },
         otherCandidates() {
+            const threshold = this.searchResult?.threshold ?? 0.5;
             return this.candidates
                 .map((c, originalIndex) => ({ ...c, originalIndex }))
-                .filter((c) => c.originalIndex !== this.selectedIndex);
+                .filter((c) => c.originalIndex !== this.selectedIndex && c.similarity >= threshold);
         },
     },
     methods: {
         onPhotoCaptured(file) {
             this.capturedPhoto = file;
+            if (file) this.handleSearch();
         },
         async handleSearch() {
             if (!this.capturedPhoto) return;
@@ -272,25 +208,32 @@ export default {
             fd.append('photo', this.capturedPhoto);
 
             try {
-                const result       = await api.post('/face-search', fd);
-                this.searchResult  = result;
-                this.selectedIndex = 0;
-                this.manuallySelected = false;
-                if (this.searchResult.matched && this.selected) {
-                    await this.fetchPayments(this.selected.client.id);
+                const result = await api.post('/face-search', fd);
+                if (result.matched) {
+                    this.searchResult  = result;
+                    this.selectedIndex = 0;
+                    if (this.selected) {
+                        await this.fetchPayments(this.selected.client.id);
+                    }
+                } else {
+                    // No confident match — auto-save as new client and go to their Edit page
+                    this.savingNew = true;
+                    const savefd = new FormData();
+                    savefd.append('photo', this.capturedPhoto);
+                    const client = await api.post('/clients/quick', savefd);
+                    this.$router.push(`/clients/${client.id}/edit?from=search`);
                 }
             } catch (e) {
-                this.searchError = e.message ?? 'Search failed. Please try again.';
+                if (e.status === 422) {
+                    // Python rejected the photo (no face / quality too low) — restart camera silently
+                    this.$refs.capture?.restart();
+                } else {
+                    this.searchError = e.message ?? 'Search failed. Please try again.';
+                }
             } finally {
-                this.searching = false;
+                this.searching  = false;
+                this.savingNew  = false;
             }
-        },
-        async selectManually(closestIndex) {
-            this.selectedIndex    = closestIndex;
-            this.manuallySelected = true;
-            this.paymentError     = null;
-            this.paymentSuccess   = null;
-            await this.fetchPayments(this.candidates[closestIndex].client.id);
         },
         async selectCandidate(index) {
             this.selectedIndex  = index;
@@ -331,15 +274,14 @@ export default {
             }
         },
         resetSearch() {
-            this.capturedPhoto    = null;
-            this.searchResult     = null;
-            this.selectedIndex    = 0;
-            this.manuallySelected = false;
-            this.searchError      = null;
-            this.payments         = [];
-            this.paymentForm      = { amount: '', notes: '' };
-            this.paymentError     = null;
-            this.paymentSuccess   = null;
+            this.capturedPhoto  = null;
+            this.searchResult   = null;
+            this.selectedIndex  = 0;
+            this.searchError    = null;
+            this.payments       = [];
+            this.paymentForm    = { amount: '', notes: '' };
+            this.paymentError   = null;
+            this.paymentSuccess = null;
         },
         matchBadgeClass(similarity) {
             const isConfident = similarity >= (this.searchResult?.threshold ?? 0.5);

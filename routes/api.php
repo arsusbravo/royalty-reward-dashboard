@@ -21,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Clients — all authenticated users can read and create
     Route::get('/clients',                       [ClientController::class, 'index']);
     Route::post('/clients',                      [ClientController::class, 'store']);
+    Route::post('/clients/quick',                [ClientController::class, 'quickStore']);
     Route::get('/clients/{client}',              [ClientController::class, 'show']);
     Route::patch('/clients/{client}/photo',      [ClientController::class, 'updatePhoto']);
 

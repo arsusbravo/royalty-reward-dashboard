@@ -17,7 +17,7 @@
                     <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Face Photo</h3>
                     <p class="text-xs text-gray-400 mt-0.5">Used for face recognition enrollment</p>
                 </div>
-                <PhotoCapture @captured="onPhotoCaptured" show-guide />
+                <PhotoCapture @captured="onPhotoCaptured" show-guide auto-detect />
                 <p v-if="errors.photo" class="text-xs text-red-500">{{ errors.photo[0] }}</p>
             </div>
 
@@ -60,31 +60,17 @@
                 </div>
             </div>
 
-            <!-- Client app login (optional) -->
-            <div class="card space-y-4">
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Client App Login</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Optional — set a password if this client will log in to the client app</p>
-                </div>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                        <label class="form-label">Password</label>
-                        <input v-model="form.password" type="password" autocomplete="new-password" class="form-input" :class="{ 'border-red-500': errors.password }" placeholder="Min 8 characters" />
-                        <p v-if="errors.password" class="mt-1 text-xs text-red-500">{{ errors.password[0] }}</p>
-                    </div>
-                    <div>
-                        <label class="form-label">Confirm Password</label>
-                        <input v-model="form.password_confirmation" type="password" autocomplete="new-password" class="form-input" />
-                    </div>
-                </div>
-            </div>
-
             <!-- Face enrollment notice -->
-            <div v-if="capturedPhoto" class="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700 flex gap-2">
+            <div class="rounded-lg border px-4 py-3 text-sm flex gap-2"
+                :class="capturedPhoto
+                    ? 'bg-blue-50 border-blue-200 text-blue-700'
+                    : 'bg-amber-50 border-amber-200 text-amber-700'">
                 <svg class="h-4 w-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Photo will be enrolled in the face recognition system upon saving.
+                {{ capturedPhoto
+                    ? 'Photo captured — will be enrolled in face recognition on save.'
+                    : 'Open the camera — photo will be captured automatically when a clear face is detected.' }}
             </div>
 
             <!-- Actions -->
@@ -112,14 +98,12 @@ export default {
     data() {
         return {
             form: {
-                name:                 '',
-                email:                '',
-                phone:                '',
-                date_of_birth:        '',
-                address:              '',
-                notes:                '',
-                password:             '',
-                password_confirmation: '',
+                name:          '',
+                email:         '',
+                phone:         '',
+                date_of_birth: '',
+                address:       '',
+                notes:         '',
             },
             capturedPhoto: null,
             errors:        {},

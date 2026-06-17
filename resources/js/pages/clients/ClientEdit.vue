@@ -12,6 +12,33 @@
             </h2>
         </div>
 
+        <!-- Alert shown when auto-saved from Find Client with no match -->
+        <div v-if="$route.query.from === 'search'" class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="flex gap-3">
+                <svg class="h-5 w-5 flex-shrink-0 text-amber-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                    <p class="font-semibold text-amber-800">Client not found — new client created</p>
+                    <p class="mt-0.5 text-sm text-amber-700">No matching client was found in the system. A new client has been saved automatically with a default name. You can update their details below, or go back to find another client.</p>
+                </div>
+            </div>
+            <div class="flex flex-col gap-2 sm:flex-shrink-0">
+                <router-link to="/find-client" class="btn-secondary text-sm text-center whitespace-nowrap">
+                    Find Another Client
+                </router-link>
+                <button
+                    v-if="isAdmin && client"
+                    type="button"
+                    :disabled="deleting"
+                    @click="deleteAndFindClient"
+                    class="btn-danger text-sm whitespace-nowrap"
+                >
+                    {{ deleting ? 'Deleting...' : 'Delete & Find Client' }}
+                </button>
+            </div>
+        </div>
+
         <!-- Loading -->
         <div v-if="fetchLoading" class="flex justify-center py-12">
             <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
@@ -29,7 +56,7 @@
                         {{ isAdmin ? 'Update the client photo (will re-enroll face)' : 'Capture a new photo for face recognition' }}
                     </p>
                 </div>
-                <PhotoCapture :current-photo-url="client?.photo_url" @captured="onPhotoCaptured" show-guide />
+                <PhotoCapture :current-photo-url="client?.photo_url" @captured="onPhotoCaptured" show-guide auto-detect />
                 <p v-if="errors.photo" class="text-xs text-red-500">{{ errors.photo[0] }}</p>
             </div>
 
@@ -67,25 +94,6 @@
                     <div class="sm:col-span-2">
                         <label class="form-label">Notes</label>
                         <textarea v-model="form.notes" rows="3" class="form-input resize-none"></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Client app login password — admin only -->
-            <div v-if="isAdmin" class="card space-y-4">
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Client App Login</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Leave blank to keep the existing password unchanged</p>
-                </div>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                        <label class="form-label">New Password</label>
-                        <input v-model="form.password" type="password" autocomplete="new-password" class="form-input" :class="{ 'border-red-500': errors.password }" placeholder="Min 8 characters" />
-                        <p v-if="errors.password" class="mt-1 text-xs text-red-500">{{ errors.password[0] }}</p>
-                    </div>
-                    <div>
-                        <label class="form-label">Confirm Password</label>
-                        <input v-model="form.password_confirmation" type="password" autocomplete="new-password" class="form-input" />
                     </div>
                 </div>
             </div>
@@ -160,7 +168,6 @@ export default {
             form:         {
                 name: '', email: '', phone: '',
                 date_of_birth: '', address: '', notes: '',
-                password: '', password_confirmation: '',
             },
             capturedPhoto: null,
             errors:        {},
@@ -168,6 +175,7 @@ export default {
             loading:       false,
             fetchLoading:  true,
             fetchError:    null,
+            deleting:      false,
             authState,
         };
     },
@@ -188,6 +196,7 @@ export default {
                 address:       data.address       ?? '',
                 notes:         data.notes         ?? '',
             };
+
         } catch (e) {
             this.fetchError = e.message;
         } finally {
@@ -198,6 +207,17 @@ export default {
         onPhotoCaptured(file) {
             this.capturedPhoto = file;
         },
+        async deleteAndFindClient() {
+            if (!this.client) return;
+            this.deleting = true;
+            try {
+                await api.delete(`/clients/${this.client.id}`);
+                this.$router.push('/find-client');
+            } catch (e) {
+                this.globalError = e.message ?? 'Could not delete client.';
+                this.deleting = false;
+            }
+        },
         async handleSubmit() {
             this.loading     = true;
             this.errors      = {};
@@ -207,11 +227,7 @@ export default {
 
             try {
                 if (this.isAdmin) {
-                    Object.entries(this.form).forEach(([k, v]) => {
-                        // Skip empty password fields so the backend treats them as unchanged
-                        if ((k === 'password' || k === 'password_confirmation') && !v) return;
-                        fd.append(k, v ?? '');
-                    });
+                    Object.entries(this.form).forEach(([k, v]) => fd.append(k, v ?? ''));
                     if (this.capturedPhoto) fd.append('photo', this.capturedPhoto);
                     await api.put(`/clients/${this.client.id}`, fd);
                 } else {

@@ -21,11 +21,16 @@ class FaceSearchController extends Controller
             'photo' => ['required', 'image', 'max:10240'],
         ]);
 
-        $photoPath = $request->file('photo')->store('searches', 'public');
-
         try {
             $results = $this->faceService->searchFaces($request->file('photo'), topK: 5);
         } catch (\RuntimeException $e) {
+            if (str_contains($e->getMessage(), 'HTTP 422')) {
+                return response()->json([
+                    'code'    => 'no_face_detected',
+                    'message' => 'No valid face detected in the photo.',
+                ], 422);
+            }
+
             Log::error('Face search service error: ' . $e->getMessage());
 
             return response()->json([
@@ -57,7 +62,7 @@ class FaceSearchController extends Controller
                 'name'       => $c['client']->name,
                 'similarity' => $c['similarity'],
             ])->all(),
-            'photo_path'  => $photoPath,
+            'photo_path'  => null,
         ]);
 
         return response()->json([

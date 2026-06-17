@@ -173,6 +173,36 @@ class ClientController extends Controller
         return response()->json($this->formatClient($client->fresh()->load('creator:id,name')));
     }
 
+    public function quickStore(Request $request): JsonResponse
+    {
+        $request->validate(['photo' => ['required', 'image', 'max:10240']]);
+
+        $autoName = 'Client ' . (Client::count() + 1);
+        $file     = $request->file('photo');
+        $photoPath = $file->store('clients/photos', 'public');
+
+        $faceEnrolled = false;
+        $faceApiId    = null;
+
+        try {
+            $result       = $this->faceService->registerFace($file, $autoName);
+            $faceEnrolled = true;
+            $faceApiId    = $result['id'] ?? null;
+        } catch (\RuntimeException $e) {
+            Log::warning('Face enrollment failed on quick-store: ' . $e->getMessage());
+        }
+
+        $client = Client::create([
+            'name'          => $autoName,
+            'created_by'    => $request->user()->id,
+            'photo_path'    => $photoPath,
+            'face_enrolled' => $faceEnrolled,
+            'face_api_id'   => $faceApiId,
+        ]);
+
+        return response()->json($this->formatClient($client->load('creator:id,name')), 201);
+    }
+
     private function formatClient(Client $client): array
     {
         return [

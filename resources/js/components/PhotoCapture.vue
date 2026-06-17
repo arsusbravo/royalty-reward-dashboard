@@ -327,6 +327,18 @@ export default {
             this.mode       = 'idle';
             this.$emit('captured', null);
         },
+        restart() {
+            this.stopFaceDetection();
+            this.stopStream();
+            if (this.previewUrl) {
+                URL.revokeObjectURL(this.previewUrl);
+                this.previewUrl = null;
+            }
+            this.faceDetected = false;
+            this.frameBlurry  = false;
+            this.$emit('captured', null);
+            this.startWebcam();
+        },
     },
 
     beforeUnmount() {
