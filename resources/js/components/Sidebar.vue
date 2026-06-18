@@ -102,8 +102,8 @@ export default {
         navItems() {
             const items = [
                 { name: 'Dashboard',    to: '/',            icon: HomeIcon },
-                { name: 'Clients',      to: '/clients',      icon: UsersIcon },
                 { name: 'Find Client',  to: '/find-client',  icon: SearchIcon },
+                { name: 'Clients',      to: '/clients',      icon: UsersIcon },
             ];
             if (this.isAdmin) {
                 items.push({ name: 'Users', to: '/users', icon: UserGroupIcon });
