@@ -151,6 +151,53 @@
                 <router-link to="/clients" class="btn-secondary">Cancel</router-link>
             </div>
         </form>
+
+        <!-- Record payment -->
+        <div v-if="!fetchLoading && !fetchError && client" class="mt-6 space-y-6">
+            <div class="card space-y-4">
+                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Record Payment</h3>
+
+                <div v-if="paymentError" class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                    {{ paymentError }}
+                </div>
+                <div v-if="paymentSuccess" class="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+                    {{ paymentSuccess }}
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="form-label">Amount <span class="text-red-500">*</span></label>
+                        <input v-model="paymentForm.amount" type="number" min="0.01" step="0.01" class="form-input" placeholder="0.00" />
+                    </div>
+                    <div>
+                        <label class="form-label">Notes</label>
+                        <input v-model="paymentForm.notes" type="text" class="form-input" placeholder="Optional" />
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    :disabled="!paymentForm.amount || recordingPayment"
+                    @click="handleRecordPayment"
+                    class="btn-primary w-full justify-center"
+                >
+                    {{ recordingPayment ? 'Recording...' : 'Record Payment' }}
+                </button>
+            </div>
+
+            <div v-if="payments.length > 0" class="card">
+                <h3 class="mb-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Recent Payments</h3>
+                <div class="divide-y divide-gray-100">
+                    <div v-for="p in payments" :key="p.id" class="flex items-center justify-between py-2.5">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">${{ p.amount.toFixed(2) }}</p>
+                            <p class="text-xs text-gray-400">{{ p.notes || 'No notes' }} · by {{ p.recorded_by?.name ?? '—' }}</p>
+                        </div>
+                        <p class="text-xs text-gray-500">{{ formatDateTime(p.created_at) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -175,7 +222,12 @@ export default {
             loading:       false,
             fetchLoading:  true,
             fetchError:    null,
-            deleting:      false,
+            deleting:         false,
+            payments:         [],
+            paymentForm:      { amount: '', notes: '' },
+            recordingPayment: false,
+            paymentError:     null,
+            paymentSuccess:   null,
             authState,
         };
     },
@@ -196,7 +248,7 @@ export default {
                 address:       data.address       ?? '',
                 notes:         data.notes         ?? '',
             };
-
+            await this.fetchPayments(data.id);
         } catch (e) {
             this.fetchError = e.message;
         } finally {
@@ -217,6 +269,39 @@ export default {
                 this.globalError = e.message ?? 'Could not delete client.';
                 this.deleting = false;
             }
+        },
+        async fetchPayments(clientId) {
+            try {
+                const data = await api.get(`/clients/${clientId}/payments`);
+                this.payments = data.data ?? [];
+            } catch {
+                this.payments = [];
+            }
+        },
+        async handleRecordPayment() {
+            if (!this.paymentForm.amount || !this.client) return;
+            this.recordingPayment = true;
+            this.paymentError     = null;
+            this.paymentSuccess   = null;
+            try {
+                const payment = await api.post(`/clients/${this.client.id}/payments`, {
+                    amount: this.paymentForm.amount,
+                    notes:  this.paymentForm.notes || null,
+                });
+                this.payments.unshift(payment);
+                this.paymentForm.amount = '';
+                this.paymentForm.notes  = '';
+                this.paymentSuccess     = 'Payment recorded successfully.';
+            } catch (e) {
+                this.paymentError = e.message ?? 'Could not record payment.';
+            } finally {
+                this.recordingPayment = false;
+            }
+        },
+        formatDateTime(value) {
+            return new Date(value.replace(' ', 'T')).toLocaleString(undefined, {
+                year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+            });
         },
         async handleSubmit() {
             this.loading     = true;
