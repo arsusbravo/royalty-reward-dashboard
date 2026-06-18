@@ -17,7 +17,7 @@
                     <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Face Photo</h3>
                     <p class="text-xs text-gray-400 mt-0.5">Used for face recognition enrollment</p>
                 </div>
-                <PhotoCapture @captured="onPhotoCaptured" show-guide auto-detect />
+                <PhotoCapture @captured="onPhotoCaptured" show-guide />
                 <p v-if="errors.photo" class="text-xs text-red-500">{{ errors.photo[0] }}</p>
             </div>
 

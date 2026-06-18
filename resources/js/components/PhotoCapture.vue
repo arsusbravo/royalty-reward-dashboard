@@ -93,7 +93,8 @@ import { markRaw } from 'vue';
 // duration of these calls only — our own error logs happen outside this window.
 const consoleMethods = ['log', 'info', 'warn', 'error', 'debug'];
 
-const BLUR_THRESHOLD = 60;
+const BLUR_THRESHOLD     = 60;
+const MIN_FACE_CONFIDENCE = 0.8;
 
 function computeBlurScore(video, boundingBox) {
     const W = 160, H = 120;
@@ -242,8 +243,10 @@ export default {
 
                     try {
                         const result = withSilencedConsole(() => this.detector.detectForVideo(video, performance.now()));
-                        if (result.detections.length > 0) {
-                            const box = result.detections[0].boundingBox;
+                        const detection = result.detections[0];
+                        const confidence = detection?.categories?.[0]?.score ?? 0;
+                        if (detection && confidence >= MIN_FACE_CONFIDENCE) {
+                            const box = detection.boundingBox;
                             if (computeBlurScore(video, box) >= BLUR_THRESHOLD) {
                                 this.frameBlurry  = false;
                                 this.faceDetected = true;
@@ -252,7 +255,8 @@ export default {
                                 this.frameBlurry = true;
                             }
                         } else {
-                            this.frameBlurry = false;
+                            this.frameBlurry  = false;
+                            this.faceDetected = false;
                         }
                     } catch (err) {
                         console.error('Face detection tick failed:', err);

@@ -56,7 +56,7 @@
                         {{ isAdmin ? 'Update the client photo (will re-enroll face)' : 'Capture a new photo for face recognition' }}
                     </p>
                 </div>
-                <PhotoCapture :current-photo-url="client?.photo_url" @captured="onPhotoCaptured" show-guide auto-detect />
+                <PhotoCapture :current-photo-url="client?.photo_url" @captured="onPhotoCaptured" show-guide />
                 <p v-if="errors.photo" class="text-xs text-red-500">{{ errors.photo[0] }}</p>
             </div>
 
